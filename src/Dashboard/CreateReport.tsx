@@ -5,6 +5,7 @@ import { generarDocumentoPDF } from './generarPDF';
 const obtenerFechasSemana = () => {
   const hoy = new Date();
   const diaSemana = hoy.getDay();
+  // Ajuste para encontrar el lunes de la semana actual
   const diferenciaLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
   const lunes = new Date(hoy);
   lunes.setDate(hoy.getDate() + diferenciaLunes);
@@ -57,13 +58,15 @@ export default function CreateReport({ onBack, userEmail, reporteIdParaVer }: Cr
     setTimeout(() => {
       setToast((prev) => (prev ? { ...prev, isExiting: true } : null));
       setTimeout(() => setToast(null), 400);
-    }, 3500);
+    }, 4500); 
   };
 
   const [actividades, setActividades] = useState({ lunes: '', martes: '', miercoles: '', jueves: '', viernes: '' });
   const [horas, setHoras] = useState<any>({ entrada_lunes: '', salida_lunes: '', entrada_martes: '', salida_martes: '', entrada_miercoles: '', salida_miercoles: '', entrada_jueves: '', salida_jueves: '', entrada_viernes: '', salida_viernes: '' });
-  const [bloqueados, setBloqueados] = useState({ lunes: false, martes: false, miercoles: false, jueves: false, viernes: false });
   const [cierre, setCierre] = useState({ aprendizajes: '', dificultades: '', plan_siguiente: '' });
+
+  // Fechas de la semana actual calculadas una sola vez
+  const fechasSemana = obtenerFechasSemana();
 
   useEffect(() => {
     cargarDatosReporte();
@@ -94,12 +97,6 @@ export default function CreateReport({ onBack, userEmail, reporteIdParaVer }: Cr
           viernes: reporteData.actividad_viernes || ''
         });
 
-        setBloqueados({
-          lunes: esModoLectura ? true : !!reporteData.actividad_lunes, martes: esModoLectura ? true : !!reporteData.actividad_martes,
-          miercoles: esModoLectura ? true : !!reporteData.actividad_miercoles, jueves: esModoLectura ? true : !!reporteData.actividad_jueves,
-          viernes: esModoLectura ? true : !!reporteData.actividad_viernes
-        });
-
         setCierre({ aprendizajes: reporteData.aprendizajes || '', dificultades: reporteData.dificultades || '', plan_siguiente: reporteData.plan_siguiente_semana || '' });
 
         const { data: horasData } = await supabase.from('hrs_entrada_y_hrs_salida').select('*').eq('reporte_id', reporteData.id).maybeSingle();
@@ -112,23 +109,22 @@ export default function CreateReport({ onBack, userEmail, reporteIdParaVer }: Cr
             entrada_viernes: formatTimeForInput(horasData?.entrada_viernes), salida_viernes: formatTimeForInput(horasData?.salida_viernes),
         };
 
-        // 🟢 INYECCIÓN TIMESESSION (Solo inyecta si es hoy, si no, respeta lo de la base de datos)
+        // 🟢 INYECCIÓN AUTOMÁTICA Y LÓGICA DE BLOQUEO
         if (!esModoLectura) {
-          const diaActualNum = new Date().getDay();
-          const diasSemana = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
-          const diaActualStr = diasSemana[diaActualNum];
-          
           const savedDate = localStorage.getItem('sessionDate');
           const savedTime = localStorage.getItem('timeSession');
-          const todayDate = new Date().toLocaleDateString('es-MX');
 
-          // Si el usuario inició sesión HOY y es un día entre Lunes y Viernes, llenamos la hora automáticamente
-          if (savedDate === todayDate && savedTime && diaActualNum >= 1 && diaActualNum <= 5) {
-            // @ts-ignore
-            if (!newHoras[`entrada_${diaActualStr}`]) {
-              // @ts-ignore
-              newHoras[`entrada_${diaActualStr}`] = savedTime;
-            }
+          // Comparamos la fecha de hoy con la fecha de cada día de la semana
+          if (savedDate && savedTime) {
+            ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].forEach(dia => {
+              if (fechasSemana[`fecha_${dia}`] === savedDate) {
+                // @ts-ignore
+                if (!newHoras[`entrada_${dia}`]) {
+                  // @ts-ignore
+                  newHoras[`entrada_${dia}`] = savedTime;
+                }
+              }
+            });
           }
         }
         setHoras(newHoras);
@@ -146,7 +142,7 @@ export default function CreateReport({ onBack, userEmail, reporteIdParaVer }: Cr
     if (!entrada || !salida) return 0;
     const [hE, mE] = entrada.split(':').map(Number);
     const [hS, mS] = salida.split(':').map(Number);
-    let diff = hS + mS / 60 - (hE + mE / 60);
+    let diff = (hS + mS / 60) - (hE + mE / 60);
     return diff > 0 ? diff : 0;
   };
 
@@ -154,8 +150,7 @@ export default function CreateReport({ onBack, userEmail, reporteIdParaVer }: Cr
     if (esModoLectura) return true;
     setLoading(true);
     try {
-      const fechas = obtenerFechasSemana();
-      const periodo = `Del ${fechas.inicio} al ${fechas.fin}`;
+      const periodo = `Del ${fechasSemana.inicio} al ${fechasSemana.fin}`;
 
       const datosReporte = {
         email: userEmail, numero_reporte: numeroReporte, periodo_semana: periodo, estado: finalizar ? 'completado' : 'borrador',
@@ -177,6 +172,7 @@ export default function CreateReport({ onBack, userEmail, reporteIdParaVer }: Cr
 
       if (currentReporteId) {
         const totalSemana = calcularHoras(horas.entrada_lunes, horas.salida_lunes) + calcularHoras(horas.entrada_martes, horas.salida_martes) + calcularHoras(horas.entrada_miercoles, horas.salida_miercoles) + calcularHoras(horas.entrada_jueves, horas.salida_jueves) + calcularHoras(horas.entrada_viernes, horas.salida_viernes);
+        
         const datosHoras = {
           reporte_id: currentReporteId, usuario_email: userEmail, entrada_lunes: formatForDB(horas.entrada_lunes), salida_lunes: formatForDB(horas.salida_lunes),
           entrada_martes: formatForDB(horas.entrada_martes), salida_martes: formatForDB(horas.salida_martes), entrada_miercoles: formatForDB(horas.entrada_miercoles),
@@ -196,11 +192,11 @@ export default function CreateReport({ onBack, userEmail, reporteIdParaVer }: Cr
       }
 
       await supabase.from('logs_sistema').insert([{ usuario_email: userEmail, accion: finalizar ? 'Finalizó Reporte' : 'Guardó Avance', detalles: `Reporte #${numeroReporte}` }]);
-      setBloqueados({ lunes: !!actividades.lunes, martes: !!actividades.martes, miercoles: !!actividades.miercoles, jueves: !!actividades.jueves, viernes: !!actividades.viernes });
       if (!finalizar) showToast('Avance guardado y horas registradas.');
       return true;
     } catch (e: any) {
-      showToast('Error de Base de Datos.', 'error');
+      console.error("Detalle del error BD:", e);
+      showToast(`Error BD: ${e.message || 'Revisa la consola'}`, 'error');
       return false;
     } finally { setLoading(false); }
   };
@@ -208,11 +204,11 @@ export default function CreateReport({ onBack, userEmail, reporteIdParaVer }: Cr
   const handleGenerarPDF = async () => {
     if (!esModoLectura) {
       const exito = await guardarEnBaseDeDatos(true);
-      if (!exito) return;
+      if (!exito) return; 
     }
     setLoading(true);
     await generarDocumentoPDF({
-      fechas: obtenerFechasSemana(), numeroReporte, esModoLectura, periodoGuardado, perfilDetectado, actividades, cierre,
+      fechas: fechasSemana, numeroReporte, esModoLectura, periodoGuardado, perfilDetectado, actividades, cierre,
       onSuccess: () => showToast('📕 Documento PDF descargado exitosamente'),
       onError: () => showToast('Error al generar PDF.', 'error'),
       onFinish: onBack
@@ -248,7 +244,6 @@ export default function CreateReport({ onBack, userEmail, reporteIdParaVer }: Cr
       </div>
 
       {esModoLectura && <div className="bg-blue-100 text-blue-800 p-3 rounded mb-4 text-center font-bold">👁️ MODO LECTURA: Estás viendo un reporte pasado. No se puede editar.</div>}
-      {!esModoLectura && <div className="bg-yellow-50 p-3 rounded mb-4 text-xs text-yellow-800 border border-yellow-200">⚠️ Nota: Tu hora de entrada se registra automáticamente al iniciar sesión en el día correspondiente. <strong>Puedes registrar tus actividades en cualquier momento.</strong></div>}
       
       <h3 className="font-bold text-gray-700 mb-3 text-lg border-b pb-2">📅 Actividades Diarias y Registro de Horas</h3>
       
@@ -257,9 +252,6 @@ export default function CreateReport({ onBack, userEmail, reporteIdParaVer }: Cr
           // @ts-ignore
           const valEntrada = horas[`entrada_${dia}`]; // @ts-ignore
           const valSalida = horas[`salida_${dia}`]; 
-          
-          // @ts-ignore
-          const diaBloqueado = bloqueados[dia];
 
           return (
             <div key={dia} className="bg-white border border-blue-200 rounded-xl shadow-sm overflow-hidden transition duration-300 ring-1 ring-blue-50">
@@ -267,31 +259,38 @@ export default function CreateReport({ onBack, userEmail, reporteIdParaVer }: Cr
                 <span className="w-32 capitalize font-bold text-slate-700 text-lg flex items-center mb-3 md:mb-0"><span className="bg-white border p-2 rounded-lg mr-2 text-xl shadow-sm">📅</span>{dia}</span>
                 <div className="flex gap-4 w-full md:w-auto">
                   
-                  {/* ENTRADA (SOLO LECTURA) */}
+                  {/* 🟢 ENTRADA: COMPLETAMENTE BLOQUEADA Y DE SOLO LECTURA */}
                   <div className="flex-1 md:w-36">
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 block">Entrada</label>
                     <div className="relative flex items-center justify-center py-2 px-3 rounded-lg border bg-gray-100 border-gray-200 cursor-not-allowed">
-                      {valEntrada ? <span className="font-bold text-blue-700 flex gap-2 items-center text-sm"><span className="text-lg">🕒</span> {formatTimeAMPM(valEntrada)}</span> : <span className="text-gray-400 font-bold flex gap-2 items-center text-xs"><span className="text-lg opacity-70">🔒</span> Sin registro</span>}
+                      {valEntrada ? (
+                        <span className="font-bold text-blue-700 flex gap-2 items-center text-sm">
+                          <span className="text-lg">🕒</span> {formatTimeAMPM(valEntrada)}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 font-bold flex gap-2 items-center text-xs">
+                          <span className="text-lg opacity-70">🔒</span> Automático
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  {/* SALIDA (LIBRE PARA EDITAR SIEMPRE) */}
+                  {/* SALIDA: ABIERTA PARA EDITAR */}
                   <div className="flex-1 md:w-36">
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 block">Salida</label>
-                    <div className={`relative flex items-center justify-center py-2 px-3 rounded-lg border transition-all duration-200 ${esModoLectura || diaBloqueado ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-white border-blue-200 hover:border-blue-400 shadow-sm cursor-pointer'}`}>
+                    <div className={`relative flex items-center justify-center py-2 px-3 rounded-lg border transition-all duration-200 ${esModoLectura ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-white border-blue-200 hover:border-blue-400 shadow-sm cursor-pointer'}`}>
                       {valSalida ? <span className="font-bold text-blue-700 flex gap-2 items-center text-sm"><span className="text-lg">🕒</span> {formatTimeAMPM(valSalida)}</span> : <span className="text-gray-400 font-bold flex gap-2 items-center text-sm"><span className="text-lg opacity-70">🕒</span> Seleccionar</span>}
                       {/* @ts-ignore */}
-                      <input type="time" value={valSalida} onChange={(e) => !esModoLectura && !diaBloqueado && setHoras({ ...horas, [`salida_${dia}`]: e.target.value })} disabled={esModoLectura || diaBloqueado} className={`absolute inset-0 w-full h-full opacity-0 ${esModoLectura || diaBloqueado ? 'cursor-not-allowed' : 'cursor-pointer'} [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0`} />
+                      <input type="time" value={valSalida} onChange={(e) => !esModoLectura && setHoras({ ...horas, [`salida_${dia}`]: e.target.value })} disabled={esModoLectura} className={`absolute inset-0 w-full h-full opacity-0 ${esModoLectura ? 'cursor-not-allowed' : 'cursor-pointer'} [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0`} />
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* CAJA DE TEXTO DE ACTIVIDADES (LIBRE PARA EDITAR SIEMPRE) */}
               <div className="p-4 bg-white">
-                <textarea placeholder={esModoLectura ? '' : 'Describe las actividades que realizaste el día de hoy...'} className={`w-full border-none p-2 h-24 resize-none transition outline-none ${esModoLectura || diaBloqueado ? 'text-gray-600 bg-transparent cursor-not-allowed' : 'text-gray-800 bg-white'}`}
+                <textarea placeholder={esModoLectura ? '' : 'Describe las actividades que realizaste el día de hoy...'} className={`w-full border-none p-2 h-24 resize-none transition outline-none ${esModoLectura ? 'text-gray-600 bg-transparent cursor-not-allowed' : 'text-gray-800 bg-white'}`}
                   // @ts-ignore
-                  value={actividades[dia]} onChange={(e) => !esModoLectura && !diaBloqueado && setActividades({ ...actividades, [dia]: e.target.value })} disabled={esModoLectura || diaBloqueado} />
+                  value={actividades[dia]} onChange={(e) => !esModoLectura && setActividades({ ...actividades, [dia]: e.target.value })} disabled={esModoLectura} />
               </div>
             </div>
           );
