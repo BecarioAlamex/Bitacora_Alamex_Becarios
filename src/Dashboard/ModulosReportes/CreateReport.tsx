@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../../supabaseClient';
 import { generarDocumentoPDF } from './generarPDF'; 
 
+// --- UTILIDADES ---
 const obtenerFechasSemana = () => {
   const hoy = new Date();
   const diaSemana = hoy.getDay();
-  // Ajuste para encontrar el lunes de la semana actual
   const diferenciaLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
   const lunes = new Date(hoy);
   lunes.setDate(hoy.getDate() + diferenciaLunes);
@@ -62,10 +62,15 @@ export default function CreateReport({ onBack, userEmail, reporteIdParaVer }: Cr
   };
 
   const [actividades, setActividades] = useState({ lunes: '', martes: '', miercoles: '', jueves: '', viernes: '' });
-  const [horas, setHoras] = useState<any>({ entrada_lunes: '', salida_lunes: '', entrada_martes: '', salida_martes: '', entrada_miercoles: '', salida_miercoles: '', entrada_jueves: '', salida_jueves: '', entrada_viernes: '', salida_viernes: '' });
+  const [horas, setHoras] = useState<any>({ 
+    entrada_lunes: '', salida_lunes: '', 
+    entrada_martes: '', salida_martes: '', 
+    entrada_miercoles: '', salida_miercoles: '', 
+    entrada_jueves: '', salida_jueves: '', 
+    entrada_viernes: '', salida_viernes: '' 
+  });
   const [cierre, setCierre] = useState({ aprendizajes: '', dificultades: '', plan_siguiente: '' });
 
-  // Fechas de la semana actual calculadas una sola vez
   const fechasSemana = obtenerFechasSemana();
 
   useEffect(() => {
@@ -101,34 +106,15 @@ export default function CreateReport({ onBack, userEmail, reporteIdParaVer }: Cr
 
         const { data: horasData } = await supabase.from('hrs_entrada_y_hrs_salida').select('*').eq('reporte_id', reporteData.id).maybeSingle();
         
-        let newHoras = {
-            entrada_lunes: formatTimeForInput(horasData?.entrada_lunes), salida_lunes: formatTimeForInput(horasData?.salida_lunes),
-            entrada_martes: formatTimeForInput(horasData?.entrada_martes), salida_martes: formatTimeForInput(horasData?.salida_martes),
-            entrada_miercoles: formatTimeForInput(horasData?.entrada_miercoles), salida_miercoles: formatTimeForInput(horasData?.salida_miercoles),
-            entrada_jueves: formatTimeForInput(horasData?.entrada_jueves), salida_jueves: formatTimeForInput(horasData?.salida_jueves),
-            entrada_viernes: formatTimeForInput(horasData?.entrada_viernes), salida_viernes: formatTimeForInput(horasData?.salida_viernes),
-        };
-
-        // 🟢 INYECCIÓN AUTOMÁTICA Y LÓGICA DE BLOQUEO
-        if (!esModoLectura) {
-          const savedDate = localStorage.getItem('sessionDate');
-          const savedTime = localStorage.getItem('timeSession');
-
-          // Comparamos la fecha de hoy con la fecha de cada día de la semana
-          if (savedDate && savedTime) {
-            ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].forEach(dia => {
-              if (fechasSemana[`fecha_${dia}`] === savedDate) {
-                // @ts-ignore
-                if (!newHoras[`entrada_${dia}`]) {
-                  // @ts-ignore
-                  newHoras[`entrada_${dia}`] = savedTime;
-                }
-              }
-            });
-          }
+        if (horasData) {
+          setHoras({
+            entrada_lunes: formatTimeForInput(horasData.entrada_lunes), salida_lunes: formatTimeForInput(horasData.salida_lunes),
+            entrada_martes: formatTimeForInput(horasData.entrada_martes), salida_martes: formatTimeForInput(horasData.salida_martes),
+            entrada_miercoles: formatTimeForInput(horasData.entrada_miercoles), salida_miercoles: formatTimeForInput(horasData.salida_miercoles),
+            entrada_jueves: formatTimeForInput(horasData.entrada_jueves), salida_jueves: formatTimeForInput(horasData.salida_jueves),
+            entrada_viernes: formatTimeForInput(horasData.entrada_viernes), salida_viernes: formatTimeForInput(horasData.salida_viernes),
+          });
         }
-        setHoras(newHoras);
-
       } else {
         const { count } = await supabase.from('reportes').select('*', { count: 'exact', head: true }).eq('email', userEmail).eq('estado', 'completado');
         setNumeroReporte((count || 0) + 1);
@@ -195,8 +181,7 @@ export default function CreateReport({ onBack, userEmail, reporteIdParaVer }: Cr
       if (!finalizar) showToast('Avance guardado y horas registradas.');
       return true;
     } catch (e: any) {
-      console.error("Detalle del error BD:", e);
-      showToast(`Error BD: ${e.message || 'Revisa la consola'}`, 'error');
+      showToast(`Error BD: ${e.message}`, 'error');
       return false;
     } finally { setLoading(false); }
   };
@@ -219,47 +204,40 @@ export default function CreateReport({ onBack, userEmail, reporteIdParaVer }: Cr
   const renderToast = () => {
     if (!toast) return null;
     return (
-      <>
-        <style>{`
-          @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-          @keyframes slideOutRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
-          .toast-enter { animation: slideInRight 0.4s ease-out forwards; }
-          .toast-exit { animation: slideOutRight 0.4s ease-in forwards; }
-        `}</style>
-        <div className={`fixed top-8 right-8 z-50 px-6 py-4 rounded-xl shadow-2xl font-bold flex items-center gap-3 ${toast.isExiting ? 'toast-exit' : 'toast-enter'} ${toast.type === 'error' ? 'bg-red-100 text-red-800 border-l-4 border-red-500' : 'bg-slate-800 text-white'}`}>
-          <span className="text-2xl">{toast.type === 'error' ? '⚠️' : '✅'}</span>{toast.message}
-        </div>
-      </>
+      <div className={`fixed top-8 right-8 z-50 px-6 py-4 rounded-xl shadow-2xl font-bold flex items-center gap-3 ${toast.isExiting ? 'animate-fade-out' : 'animate-fade-in'} ${toast.type === 'error' ? 'bg-red-100 text-red-800 border-l-4 border-red-500' : 'bg-slate-800 text-white'}`}>
+        <span className="text-2xl">{toast.type === 'error' ? '⚠️' : '✅'}</span>{toast.message}
+      </div>
     );
   };
 
   if (loading) return <div className="flex h-full items-center justify-center p-8"><div className="text-xl text-gray-500 font-bold animate-pulse">Cargando tu información...</div></div>;
 
   return (
-    <div className="p-6 max-w-4xl mx-auto bg-white rounded-xl shadow mt-2 border-t-4 border-green-500 animate-fade-in mb-10 relative">
+    <div className="p-6 max-w-4xl mx-auto bg-white rounded-xl shadow mt-2 border-t-4 border-green-500 mb-10 relative">
       {renderToast()}
       <div className="flex justify-between items-center mb-6">
         <button onClick={onBack} className="text-gray-500 hover:text-blue-500 font-bold flex gap-1 items-center transition">⬅ Volver al Tablero</button>
         <div className="text-right text-sm bg-gray-50 p-2 rounded-lg border"><p><strong>Becario:</strong> {perfilDetectado?.nombre_completo}</p><p><strong>Reporte:</strong> {numeroReporte}</p></div>
       </div>
 
-      {esModoLectura && <div className="bg-blue-100 text-blue-800 p-3 rounded mb-4 text-center font-bold">👁️ MODO LECTURA: Estás viendo un reporte pasado. No se puede editar.</div>}
+      {esModoLectura && <div className="bg-blue-100 text-blue-800 p-3 rounded mb-4 text-center font-bold">👁️ MODO LECTURA: Reporte histórico.</div>}
       
       <h3 className="font-bold text-gray-700 mb-3 text-lg border-b pb-2">📅 Actividades Diarias y Registro de Horas</h3>
       
       <div className="grid gap-6 mb-8">
         {['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].map((dia) => {
-          // @ts-ignore
-          const valEntrada = horas[`entrada_${dia}`]; // @ts-ignore
+          const valEntrada = horas[`entrada_${dia}`]; 
           const valSalida = horas[`salida_${dia}`]; 
 
           return (
-            <div key={dia} className="bg-white border border-blue-200 rounded-xl shadow-sm overflow-hidden transition duration-300 ring-1 ring-blue-50">
+            <div key={dia} className="bg-white border border-blue-200 rounded-xl shadow-sm overflow-hidden transition duration-300">
               <div className="bg-slate-50 flex flex-col md:flex-row justify-between items-center p-4 border-b">
-                <span className="w-32 capitalize font-bold text-slate-700 text-lg flex items-center mb-3 md:mb-0"><span className="bg-white border p-2 rounded-lg mr-2 text-xl shadow-sm">📅</span>{dia}</span>
+                <span className="w-32 capitalize font-bold text-slate-700 text-lg flex items-center mb-3 md:mb-0">
+                  <span className="bg-white border p-2 rounded-lg mr-2 text-xl shadow-sm">📅</span>{dia}
+                </span>
+                
                 <div className="flex gap-4 w-full md:w-auto">
-                  
-                  {/* 🟢 ENTRADA: COMPLETAMENTE BLOQUEADA Y DE SOLO LECTURA */}
+                  {/* ENTRADA: SOLO LECTURA SIEMPRE */}
                   <div className="flex-1 md:w-36">
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 block">Entrada</label>
                     <div className="relative flex items-center justify-center py-2 px-3 rounded-lg border bg-gray-100 border-gray-200 cursor-not-allowed">
@@ -275,49 +253,44 @@ export default function CreateReport({ onBack, userEmail, reporteIdParaVer }: Cr
                     </div>
                   </div>
 
-                  {/* SALIDA: ABIERTA PARA EDITAR */}
+                  {/* SALIDA: EDITABLE */}
                   <div className="flex-1 md:w-36">
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 block">Salida</label>
-                    <div className={`relative flex items-center justify-center py-2 px-3 rounded-lg border transition-all duration-200 ${esModoLectura ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-white border-blue-200 hover:border-blue-400 shadow-sm cursor-pointer'}`}>
-                      {valSalida ? <span className="font-bold text-blue-700 flex gap-2 items-center text-sm"><span className="text-lg">🕒</span> {formatTimeAMPM(valSalida)}</span> : <span className="text-gray-400 font-bold flex gap-2 items-center text-sm"><span className="text-lg opacity-70">🕒</span> Seleccionar</span>}
-                      {/* @ts-ignore */}
-                      <input type="time" value={valSalida} onChange={(e) => !esModoLectura && setHoras({ ...horas, [`salida_${dia}`]: e.target.value })} disabled={esModoLectura} className={`absolute inset-0 w-full h-full opacity-0 ${esModoLectura ? 'cursor-not-allowed' : 'cursor-pointer'} [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0`} />
+                    <div className={`relative flex items-center justify-center py-2 px-3 rounded-lg border transition-all ${esModoLectura ? 'bg-gray-100 cursor-not-allowed' : 'bg-white border-blue-200 hover:border-blue-400 shadow-sm cursor-pointer'}`}>
+                      {valSalida ? <span className="font-bold text-blue-700 flex gap-2 items-center text-sm">🕒 {formatTimeAMPM(valSalida)}</span> : <span className="text-gray-400 font-bold text-sm">🕒 Seleccionar</span>}
+                      <input 
+                        type="time" 
+                        value={valSalida} 
+                        onChange={(e) => !esModoLectura && setHoras({ ...horas, [`salida_${dia}`]: e.target.value })} 
+                        disabled={esModoLectura} 
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed" 
+                      />
                     </div>
                   </div>
                 </div>
               </div>
 
               <div className="p-4 bg-white">
-                <textarea placeholder={esModoLectura ? '' : 'Describe las actividades que realizaste el día de hoy...'} className={`w-full border-none p-2 h-24 resize-none transition outline-none ${esModoLectura ? 'text-gray-600 bg-transparent cursor-not-allowed' : 'text-gray-800 bg-white'}`}
-                  // @ts-ignore
-                  value={actividades[dia]} onChange={(e) => !esModoLectura && setActividades({ ...actividades, [dia]: e.target.value })} disabled={esModoLectura} />
+                <textarea 
+                  placeholder={esModoLectura ? '' : 'Describe tus actividades...'} 
+                  className={`w-full border-none p-2 h-24 resize-none outline-none ${esModoLectura ? 'text-gray-600 bg-transparent cursor-not-allowed' : 'text-gray-800'}`}
+                  value={actividades[dia as keyof typeof actividades]} 
+                  onChange={(e) => !esModoLectura && setActividades({ ...actividades, [dia]: e.target.value })} 
+                  disabled={esModoLectura} 
+                />
               </div>
             </div>
           );
         })}
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6 mb-6">
-        <div>
-          <label className="font-bold text-gray-700 block mb-1 text-sm">¿Qué aprendiste en la semana?</label>
-          <textarea className={`w-full border p-3 rounded-lg h-24 resize-none transition outline-none focus:border-blue-400 ${esModoLectura ? 'bg-gray-100 text-gray-500' : 'bg-white'}`} value={cierre.aprendizajes} onChange={(e) => !esModoLectura && setCierre({ ...cierre, aprendizajes: e.target.value })} disabled={esModoLectura} />
-        </div>
-        <div>
-          <label className="font-bold text-gray-700 block mb-1 text-sm">¿Qué se complicó en la semana?</label>
-          <textarea className={`w-full border p-3 rounded-lg h-24 resize-none transition outline-none focus:border-blue-400 ${esModoLectura ? 'bg-gray-100 text-gray-500' : 'bg-white'}`} value={cierre.dificultades} onChange={(e) => !esModoLectura && setCierre({ ...cierre, dificultades: e.target.value })} disabled={esModoLectura} />
-        </div>
-      </div>
-      
-      <label className="font-bold text-gray-700 block mb-1 text-sm">PLAN SIGUIENTE SEMANA</label>
-      <input className={`w-full border p-3 rounded-lg mb-6 transition outline-none focus:border-blue-400 ${esModoLectura ? 'bg-gray-100 text-gray-500' : 'bg-white'}`} value={cierre.plan_siguiente} onChange={(e) => !esModoLectura && setCierre({ ...cierre, plan_siguiente: e.target.value })} disabled={esModoLectura} />
-
       <div className="flex flex-col gap-4 border-t pt-6">
         {!esModoLectura && (
-          <button onClick={() => guardarEnBaseDeDatos(false)} disabled={loading} className="w-full bg-slate-800 text-white font-bold py-4 rounded-xl hover:bg-slate-700 transition shadow-md">
-            {loading ? 'Guardando horas y avances...' : '💾 Guardar Avance del Día'}
+          <button onClick={() => guardarEnBaseDeDatos(false)} disabled={loading} className="w-full bg-slate-800 text-white font-bold py-4 rounded-xl hover:bg-slate-700 shadow-md">
+            {loading ? 'Guardando...' : '💾 Guardar Avance del Día'}
           </button>
         )}
-        <button onClick={handleGenerarPDF} disabled={loading} className="w-full bg-red-600 text-white font-bold py-4 rounded-xl hover:bg-red-700 shadow-md transition transform hover:-translate-y-1">
+        <button onClick={handleGenerarPDF} disabled={loading} className="w-full bg-red-600 text-white font-bold py-4 rounded-xl hover:bg-red-700 shadow-md transform hover:-translate-y-1 transition">
           {esModoLectura ? '📕 Descargar Copia PDF' : '📕 Finalizar y Descargar PDF'}
         </button>
       </div>

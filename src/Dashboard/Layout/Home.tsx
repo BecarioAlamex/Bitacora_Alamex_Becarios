@@ -1,25 +1,30 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient'; 
+import { supabase } from '../../supabaseClient'; 
+// CORRECCIÓN DE RUTA: Subimos dos niveles (Layout -> Dashboard -> src) y entramos a services
+import { registrarEntradaActual } from '../../services/asistenciaService';
 
-// Importamos todas nuestras "piezas de lego"
 import Sidebar from './Sidebar';
 import TopHeader from './TopHeader';
-import TableroInicio from './TableroInicio';
-import CreateReport from './CreateReport'; 
-import RegistroHoras from './RegistroHoras'; 
-import Notificaciones from './Notificaciones'; 
+import TableroInicio from '../ModuloInicio/TableroInicio';
+import RegistroHoras from '../ModuloInicio/RegistroHoras'; 
+import CreateReport from '../ModulosReportes/CreateReport'; 
+import Notificaciones from '../notificaciones/Notificaciones'; 
+import AdminUsuariosPrincipal from '../ModuloAdminUsuarios/AdminUsuariosPrincipal';
 
-type ViewType = 'dashboard' | 'create' | 'view' | 'registro_horas' | 'notificaciones';
+type ViewType = 'dashboard' | 'create' | 'view' | 'registro_horas' | 'notificaciones' | 'admin_usuarios';
 
 export default function DashboardHome() {
   const [showConstruction, setShowConstruction] = useState(false);
   const [currentView, setCurrentView] = useState<ViewType>('dashboard');
   const [reporteSeleccionadoId, setReporteSeleccionadoId] = useState<number | null>(null);
-  
   const [reportesBorrador, setReportesBorrador] = useState<any[]>([]);
   const [reportesCompletados, setReportesCompletados] = useState<any[]>([]);
 
-  const userEmail = 'becario@alam.mx'; // En el futuro esto vendrá del Login
+  const userEmail = 'becario@alam.mx'; 
+
+  useEffect(() => {
+    if (userEmail) registrarEntradaActual(userEmail);
+  }, [userEmail]);
 
   const handleConstruction = () => setShowConstruction(true);
   const closeConstruction = () => setShowConstruction(false);
@@ -49,26 +54,21 @@ export default function DashboardHome() {
 
   return (
     <div className="flex h-screen bg-gray-100">
-      
-      {/* 1. PIEZA: BARRA LATERAL */}
       <Sidebar 
         userEmail={userEmail} 
         currentView={currentView} 
         setCurrentView={setCurrentView} 
         handleConstruction={handleConstruction} 
       />
-
       <main className="flex-1 flex flex-col overflow-y-auto">
-        
-        {/* 2. PIEZA: CABECERA */}
         <TopHeader 
           currentView={currentView} 
           setCurrentView={setCurrentView} 
           handleConstruction={handleConstruction} 
         />
-
-        {/* 3. PIEZA: CONTENIDO PRINCIPAL (Cambia según la vista) */}
-        {currentView === 'registro_horas' ? (
+        {currentView === 'admin_usuarios' ? (
+          <AdminUsuariosPrincipal />
+        ) : currentView === 'registro_horas' ? (
           <RegistroHoras userEmail={userEmail} />
         ) : currentView === 'notificaciones' ? (
           <Notificaciones userEmail={userEmail} />
@@ -87,8 +87,6 @@ export default function DashboardHome() {
           />
         )}
       </main>
-
-      {/* MODAL DE CONSTRUCCIÓN */}
       {showConstruction && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-8 rounded-lg shadow-2xl text-center max-w-sm border-t-4 border-yellow-500">

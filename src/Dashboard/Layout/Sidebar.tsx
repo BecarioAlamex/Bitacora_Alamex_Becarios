@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 
-type ViewType = 'dashboard' | 'create' | 'view' | 'registro_horas' | 'notificaciones';
+// Actualizamos el tipo para incluir la nueva vista
+type ViewType = 'dashboard' | 'create' | 'view' | 'registro_horas' | 'notificaciones' | 'admin_usuarios';
 
 interface SidebarProps {
   userEmail: string;
@@ -21,6 +22,7 @@ export default function Sidebar({ userEmail, currentView, setCurrentView, handle
           <p className="text-xs text-gray-300">{userEmail}</p>
         </div>
       </div>
+
       <nav className="flex flex-col gap-4 flex-1">
         <p className="text-xs text-gray-400 font-bold uppercase ml-2">Menú Principal</p>
         
@@ -31,10 +33,16 @@ export default function Sidebar({ userEmail, currentView, setCurrentView, handle
         <button onClick={() => setCurrentView('registro_horas')} className={`p-3 text-left rounded transition flex items-center gap-2 ${currentView === 'registro_horas' ? 'bg-blue-600' : 'bg-slate-700 hover:bg-slate-600'}`}>
           🕒 REGISTRO DE HORAS
         </button>
+
+        {/* BOTÓN ADMINISTRAR USUARIOS - Corregido con estilo del menú */}
+        <button onClick={() => setCurrentView('admin_usuarios')} className={`p-3 text-left rounded transition flex items-center gap-2 ${currentView === 'admin_usuarios' ? 'bg-blue-600' : 'bg-slate-700 hover:bg-slate-600'}`}>
+          🔧 ADMINISTRAR USUARIOS
+        </button>
         
         <button onClick={handleConstruction} className="p-3 text-left bg-slate-700 hover:bg-slate-600 rounded transition flex items-center gap-2">
           🚫 REPORTE DE FALTAS
         </button>
+        
         <button onClick={handleConstruction} className="p-3 text-left bg-slate-700 hover:bg-slate-600 rounded transition flex items-center gap-2">
           📷 EVIDENCIA FOTOGRÁFICA
         </button>

@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './Login'; 
-import ConfigurarPerfil from './Dashboard/ConfigurarPerfil';
-import DashboardHome from './Dashboard/Home';
+import ConfigurarPerfil from './Dashboard/perfil/ConfigurarPerfil';
+import DashboardHome from './Dashboard/Layout/Home';
 
 export default function App() {
   return (
