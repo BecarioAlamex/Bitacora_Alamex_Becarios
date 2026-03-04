@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router-dom';
 
-// Actualizamos el tipo para incluir la nueva vista
 type ViewType = 'dashboard' | 'create' | 'view' | 'registro_horas' | 'notificaciones' | 'admin_usuarios';
 
 interface SidebarProps {
@@ -16,7 +15,7 @@ export default function Sidebar({ userEmail, currentView, setCurrentView, handle
   return (
     <aside className="w-64 bg-slate-800 text-white flex flex-col p-4 shadow-xl z-10 overflow-y-auto">
       <div className="flex items-center gap-3 mb-10 p-2 bg-slate-700 rounded-lg">
-        <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center font-bold text-lg">U</div>
+        <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center font-bold text-lg text-white">U</div>
         <div>
           <p className="font-bold text-sm">Usuario Actual</p>
           <p className="text-xs text-gray-300">{userEmail}</p>
@@ -34,8 +33,8 @@ export default function Sidebar({ userEmail, currentView, setCurrentView, handle
           🕒 REGISTRO DE HORAS
         </button>
 
-        {/* BOTÓN ADMINISTRAR USUARIOS - Corregido con estilo del menú */}
-        <button onClick={() => setCurrentView('admin_usuarios')} className={`p-3 text-left rounded transition flex items-center gap-2 ${currentView === 'admin_usuarios' ? 'bg-blue-600' : 'bg-slate-700 hover:bg-slate-600'}`}>
+        {/* CORRECCIÓN: Botón Administrar Usuarios conectado a la vista real */}
+        <button onClick={() => setCurrentView('admin_usuarios')} className={`p-3 text-left rounded transition flex items-center gap-2 ${currentView === 'admin_usuarios' ? 'bg-blue-600 font-bold' : 'bg-slate-700 hover:bg-slate-600'}`}>
           🔧 ADMINISTRAR USUARIOS
         </button>
         
@@ -43,16 +42,16 @@ export default function Sidebar({ userEmail, currentView, setCurrentView, handle
           🚫 REPORTE DE FALTAS
         </button>
         
-        <button onClick={handleConstruction} className="p-3 text-left bg-slate-700 hover:bg-slate-600 rounded transition flex items-center gap-2">
+        <button onClick={handleConstruction} className="p-3 text-left bg-slate-700 hover:bg-slate-600 rounded transition flex items-center gap-2 font-medium">
           📷 EVIDENCIA FOTOGRÁFICA
         </button>
         
-        <div className="mt-auto flex flex-col gap-2">
+        <div className="mt-auto flex flex-col gap-2 pt-4 border-t border-slate-700">
           <button onClick={() => navigate('/')} className="p-3 text-left hover:bg-red-600 rounded transition text-sm flex items-center gap-2 font-bold text-red-200">
             ⬅ Cerrar Sesión
           </button>
           
-          <button onClick={() => setCurrentView('notificaciones')} className={`p-3 text-left rounded transition text-sm flex items-center gap-2 font-bold border-t border-slate-600 pt-4 mt-2 ${currentView === 'notificaciones' ? 'text-yellow-400' : 'text-gray-400 hover:text-yellow-400'}`}>
+          <button onClick={() => setCurrentView('notificaciones')} className={`p-3 text-left rounded transition text-sm flex items-center gap-2 font-bold ${currentView === 'notificaciones' ? 'text-yellow-400' : 'text-gray-400 hover:text-yellow-400'}`}>
             🔔 Ver Notificaciones
           </button>
         </div>

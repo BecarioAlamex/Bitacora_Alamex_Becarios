@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient'; 
-// CORRECCIÓN DE RUTA: Subimos dos niveles (Layout -> Dashboard -> src) y entramos a services
 import { registrarEntradaActual } from '../../services/asistenciaService';
 
+// Importaciones de módulos
 import Sidebar from './Sidebar';
 import TopHeader from './TopHeader';
 import TableroInicio from '../ModuloInicio/TableroInicio';
@@ -60,40 +60,46 @@ export default function DashboardHome() {
         setCurrentView={setCurrentView} 
         handleConstruction={handleConstruction} 
       />
+
       <main className="flex-1 flex flex-col overflow-y-auto">
         <TopHeader 
           currentView={currentView} 
           setCurrentView={setCurrentView} 
           handleConstruction={handleConstruction} 
         />
-        {currentView === 'admin_usuarios' ? (
-          <AdminUsuariosPrincipal />
-        ) : currentView === 'registro_horas' ? (
-          <RegistroHoras userEmail={userEmail} />
-        ) : currentView === 'notificaciones' ? (
-          <Notificaciones userEmail={userEmail} />
-        ) : currentView === 'dashboard' ? (
-          <TableroInicio 
-            reportesBorrador={reportesBorrador} 
-            reportesCompletados={reportesCompletados} 
-            setCurrentView={setCurrentView} 
-            verReportePasado={verReportePasado} 
-          />
-        ) : (
-          <CreateReport
-            onBack={() => { setCurrentView('dashboard'); fetchReportes(); }}
-            userEmail={userEmail}
-            reporteIdParaVer={reporteSeleccionadoId}
-          />
-        )}
+
+        <section className="flex-1 p-4">
+          {/* LOGICA DE ENRUTAMIENTO CORREGIDA */}
+          {currentView === 'admin_usuarios' ? (
+            <AdminUsuariosPrincipal />
+          ) : currentView === 'registro_horas' ? (
+            <RegistroHoras userEmail={userEmail} />
+          ) : currentView === 'notificaciones' ? (
+            <Notificaciones userEmail={userEmail} />
+          ) : currentView === 'dashboard' ? (
+            <TableroInicio 
+              reportesBorrador={reportesBorrador} 
+              reportesCompletados={reportesCompletados} 
+              setCurrentView={setCurrentView} 
+              verReportePasado={verReportePasado} 
+            />
+          ) : (
+            <CreateReport
+              onBack={() => { setCurrentView('dashboard'); fetchReportes(); }}
+              userEmail={userEmail}
+              reporteIdParaVer={reporteSeleccionadoId}
+            />
+          )}
+        </section>
       </main>
+
       {showConstruction && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-8 rounded-lg shadow-2xl text-center max-w-sm border-t-4 border-yellow-500">
-            <div className="text-6xl mb-4 animate-spin-slow">⚙️</div>
-            <h2 className="text-xl font-bold text-gray-800 mb-2">Estamos trabajando en esto</h2>
-            <p className="text-gray-600 mb-6">Próximamente disponible.</p>
-            <button onClick={closeConstruction} className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-6 rounded transition">Entendido</button>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-sm border-t-8 border-yellow-500">
+            <div className="text-7xl mb-4">⚙️</div>
+            <h2 className="text-2xl font-black text-slate-800 mb-2">Módulo en Desarrollo</h2>
+            <p className="text-slate-600 mb-8 font-medium">Esta función estará disponible próximamente.</p>
+            <button onClick={closeConstruction} className="w-full bg-yellow-500 hover:bg-yellow-600 text-slate-900 font-black py-3 rounded-xl transition-all shadow-lg">¡ENTENDIDO!</button>
           </div>
         </div>
       )}
